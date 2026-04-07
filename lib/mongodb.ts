@@ -13,7 +13,9 @@ export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db
     return cached
   }
 
-  const client = await MongoClient.connect(MONGODB_URI)
+  const client = await MongoClient.connect(MONGODB_URI, {
+    serverSelectionTimeoutMS: 5000,
+  })
   const db = client.db("driftmap")
 
   cached = { client, db }

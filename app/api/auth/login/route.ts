@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     })
     response.cookies.set("driftmap_token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: false, // Set to false since EC2 runs on HTTP initially
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7,
       path: "/",

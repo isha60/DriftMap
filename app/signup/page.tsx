@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { MapPin, Loader2, Eye, EyeOff } from "lucide-react"
-import { AuthProvider, useAuth } from "@/lib/auth-context"
+import { useAuth } from "@/lib/auth-context"
 import { toast } from "sonner"
 
 function SignupForm() {
@@ -22,7 +22,7 @@ function SignupForm() {
     try {
       await signup(name, email, password)
       toast.success("Account created! Welcome to Driftmap.")
-      router.push("/dashboard")
+      router.replace("/dashboard")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Signup failed")
     } finally {
@@ -129,9 +129,5 @@ function SignupForm() {
 }
 
 export default function SignupPage() {
-  return (
-    <AuthProvider>
-      <SignupForm />
-    </AuthProvider>
-  )
+  return <SignupForm />
 }

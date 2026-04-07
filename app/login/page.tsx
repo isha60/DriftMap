@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { MapPin, Loader2, Eye, EyeOff } from "lucide-react"
-import { AuthProvider, useAuth } from "@/lib/auth-context"
+import { useAuth } from "@/lib/auth-context"
 import { toast } from "sonner"
 
 function LoginForm() {
@@ -21,7 +21,7 @@ function LoginForm() {
     try {
       await login(email, password)
       toast.success("Welcome back!")
-      router.push("/dashboard")
+      router.replace("/dashboard")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Login failed")
     } finally {
@@ -110,9 +110,5 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
-  return (
-    <AuthProvider>
-      <LoginForm />
-    </AuthProvider>
-  )
+  return <LoginForm />
 }

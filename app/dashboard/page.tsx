@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { AuthProvider, useAuth } from "@/lib/auth-context"
+import { useAuth } from "@/lib/auth-context"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { StatsOverview } from "@/components/stats-overview"
 import { Loader2 } from "lucide-react"
@@ -43,9 +43,5 @@ function DashboardContent() {
 }
 
 export default function DashboardPage() {
-  return (
-    <AuthProvider>
-      <DashboardContent />
-    </AuthProvider>
-  )
+  return <DashboardContent />
 }

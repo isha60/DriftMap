@@ -21,7 +21,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
+const fetcher = (url: string) => fetch(url, { credentials: "include" }).then((r) => r.json())
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { data, isLoading, mutate } = useSWR("/api/auth/me", fetcher, {

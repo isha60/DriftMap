@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { AuthProvider, useAuth } from "@/lib/auth-context"
+import { useAuth } from "@/lib/auth-context"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { EntryForm } from "@/components/entry-form"
 import { Loader2 } from "lucide-react"
@@ -35,9 +35,5 @@ function NewEntryContent() {
 }
 
 export default function NewEntryPage() {
-  return (
-    <AuthProvider>
-      <NewEntryContent />
-    </AuthProvider>
-  )
+  return <NewEntryContent />
 }

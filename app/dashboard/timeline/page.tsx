@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { AuthProvider, useAuth } from "@/lib/auth-context"
+import { useAuth } from "@/lib/auth-context"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { TimelineView } from "@/components/timeline-view"
 import { Loader2 } from "lucide-react"
@@ -41,9 +41,5 @@ function TimelineContent() {
 }
 
 export default function TimelinePage() {
-  return (
-    <AuthProvider>
-      <TimelineContent />
-    </AuthProvider>
-  )
+  return <TimelineContent />
 }
