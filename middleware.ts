@@ -37,8 +37,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // If already logged in and trying to visit login/signup → redirect to dashboard
-  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route))
+  // If already logged in and trying to visit login/signup or landing page → redirect to dashboard
+  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route)) || pathname === "/"
   if (isAuthRoute && isValidToken) {
     return NextResponse.redirect(new URL("/dashboard", request.url))
   }
@@ -47,5 +47,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/signup"],
+  matcher: ["/", "/dashboard/:path*", "/login", "/signup"],
 }
