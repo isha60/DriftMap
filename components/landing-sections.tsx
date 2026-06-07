@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import {
   ArrowRight,
@@ -8,8 +10,11 @@ import {
   Shield,
   Sparkles,
 } from "lucide-react"
+import { useAuth } from "@/lib/auth-context"
 
 export function HeroSection() {
+  const { user, isLoading } = useAuth()
+
   return (
     <section className="relative flex min-h-[90vh] flex-col items-center justify-center overflow-hidden px-6 pt-24 pb-16 text-center">
       <div className="absolute inset-0 -z-10">
@@ -33,19 +38,36 @@ export function HeroSection() {
       </p>
 
       <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row">
-        <Link
-          href="/signup"
-          className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:opacity-90 hover:shadow-xl hover:shadow-primary/25"
-        >
-          Start Your Timeline
-          <ArrowRight className="h-4 w-4" />
-        </Link>
-        <Link
-          href="/login"
-          className="inline-flex h-12 items-center rounded-xl border border-border bg-card px-8 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-        >
-          Sign In
-        </Link>
+        {isLoading ? (
+          <>
+            <div className="h-12 w-48 animate-pulse rounded-xl bg-muted" />
+            <div className="h-12 w-24 animate-pulse rounded-xl bg-muted" />
+          </>
+        ) : user ? (
+          <Link
+            href="/dashboard"
+            className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:opacity-90 hover:shadow-xl hover:shadow-primary/25"
+          >
+            Go to Dashboard
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        ) : (
+          <>
+            <Link
+              href="/signup"
+              className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:opacity-90 hover:shadow-xl hover:shadow-primary/25"
+            >
+              Start Your Timeline
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/login"
+              className="inline-flex h-12 items-center rounded-xl border border-border bg-card px-8 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+            >
+              Sign In
+            </Link>
+          </>
+        )}
       </div>
 
       <div className="mt-16 flex items-center gap-8 text-xs text-muted-foreground">
@@ -173,24 +195,40 @@ export function HowItWorksSection() {
 }
 
 export function CTASection() {
+  const { user, isLoading } = useAuth()
+
   return (
     <section className="px-6 py-24">
       <div className="mx-auto max-w-3xl text-center">
         <h2 className="font-serif text-3xl font-bold text-foreground md:text-4xl text-balance">
-          Start Mapping Your Life Today
+          {user ? "Welcome Back to Your Journey" : "Start Mapping Your Life Today"}
         </h2>
         <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-          Every day is a new point on your map. Begin capturing the moments that
-          define you.
+          {user
+            ? "Your timeline is waiting. Keep capturing the moments that define you."
+            : "Every day is a new point on your map. Begin capturing the moments that define you."}
         </p>
-        <Link
-          href="/signup"
-          className="mt-8 inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:opacity-90"
-        >
-          Create Free Account
-          <ArrowRight className="h-4 w-4" />
-        </Link>
+        {isLoading ? (
+          <div className="mt-8 mx-auto h-12 w-48 animate-pulse rounded-xl bg-muted" />
+        ) : user ? (
+          <Link
+            href="/dashboard"
+            className="mt-8 inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:opacity-90"
+          >
+            Go to Dashboard
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        ) : (
+          <Link
+            href="/signup"
+            className="mt-8 inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:opacity-90"
+          >
+            Create Free Account
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        )}
       </div>
     </section>
   )
 }
+
