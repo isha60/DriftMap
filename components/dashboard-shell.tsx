@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { MapPin, LogOut, LayoutDashboard, Clock, Plus } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 
@@ -12,12 +11,6 @@ interface DashboardShellProps {
 
 export function DashboardShell({ children, activeTab }: DashboardShellProps) {
   const { user, logout } = useAuth()
-  const router = useRouter()
-
-  const handleLogout = async () => {
-    await logout()
-    router.push("/")
-  }
 
   const navItems = [
     { key: "overview" as const, label: "Overview", icon: LayoutDashboard, href: "/dashboard" },
@@ -64,7 +57,7 @@ export function DashboardShell({ children, activeTab }: DashboardShellProps) {
               </span>
             )}
             <button
-              onClick={handleLogout}
+              onClick={logout}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               aria-label="Sign out"
             >
