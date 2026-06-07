@@ -1,118 +1,295 @@
-# DriftMap EC2 Deployment Guide
+# DriftMap — AWS EC2 Deployment Guide (Amazon Linux, No Nginx)
 
-Here is the complete, step-by-step process for deploying DriftMap directly to your AWS EC2 instance without using Nginx.
-
-Since we are not using Nginx to reverse-proxy port 80, your application will be served directly from Node.js on port **3000**. Users will need to append `:3000` to your IP address to visit the site (e.g., `http://your-ec2-ip:3000`).
+A complete, step-by-step guide to deploying the DriftMap Next.js application on an AWS EC2 instance running **Amazon Linux 2023**, using Node.js and PM2. No Nginx needed — the app is served directly on port **3000**.
 
 ---
 
-## Step 1: Prepare the EC2 Instance (Security Groups)
+## Prerequisites
 
-Before touching the terminal, ensure your EC2 instance is configured to accept web traffic on your application's port.
-1. Go to your AWS EC2 Dashboard.
-2. Select your instance and click the **Security** tab, then click the **Security Group**.
-3. Click **Edit inbound rules** and add the following:
-   - **Type:** SSH | **Port Range:** 22 | **Source:** Anywhere (Or your specific IP)
-   - **Type:** Custom TCP | **Port Range:** 3000 | **Source:** Anywhere (0.0.0.0/0)
-4. Save the rules.
+Before you begin, make sure you have:
+- An **AWS account** with EC2 access.
+- Your **DriftMap repository** pushed to GitHub.
+- A **MongoDB Atlas** cluster already created and running.
+- Your **GitHub Personal Access Token (PAT)** if your repo is private.
 
 ---
 
-## Step 2: Connect and Install Dependencies
+## Step 1: Launch an EC2 Instance
 
-Connect to your EC2 instance using SSH (`ssh -i your-key.pem ubuntu@your-ec2-ip`). Once logged in, run these commands to install the required software:
+1. Go to the [AWS EC2 Console](https://console.aws.amazon.com/ec2/).
+2. Click **Launch Instance**.
+3. Configure the instance:
+   - **Name:** `driftmap-server`
+   - **AMI (OS):** `Amazon Linux 2023 AMI` — Free tier eligible ✅
+   - **Instance Type:** `t2.micro` (Free Tier) or `t3.small` for better performance.
+   - **Key Pair:**
+     - Click **Create new key pair**.
+     - Name it `driftmap-key`, select **RSA**, format `.pem`, and click **Create**.
+     - ⚠️ **The `.pem` file downloads automatically. Keep it safe — you cannot re-download it.**
+4. Under **Network Settings**, click **Edit** and configure:
+   - **Allow SSH traffic from:** `My IP` (recommended) or `Anywhere`.
+5. Under **Configure Storage**, set **8 GiB** (minimum) or **20 GiB** (recommended for builds).
+6. Click **Launch Instance** and wait ~1 minute for it to start.
 
-### 1. Update the system:
-```bash
-sudo apt update && sudo apt upgrade -y
+---
+
+## Step 2: Configure Security Group Rules
+
+Since we are not using Nginx, we only need **SSH** and **port 3000** open.
+
+1. In the EC2 Dashboard, select your instance.
+2. Click the **Security** tab → click the **Security Group** link.
+3. Click **Edit Inbound Rules** and ensure these rules exist:
+
+| Type        | Protocol | Port  | Source               | Purpose                  |
+|-------------|----------|-------|----------------------|--------------------------|
+| SSH         | TCP      | 22    | My IP (or 0.0.0.0/0) | Remote terminal access   |
+| Custom TCP  | TCP      | 3000  | 0.0.0.0/0            | Direct Node.js web access |
+
+4. Click **Save Rules**.
+
+---
+
+## Step 3: Connect via EC2 Instance Connect (Browser Terminal)
+
+No SSH client or `.pem` file needed — connect directly from your browser.
+
+1. Go to **EC2 → Instances** in the AWS Console.
+2. Select your instance (`Driftmap2`).
+3. Click the **Connect** button at the top of the page.
+4. Choose the **"EC2 Instance Connect"** tab.
+5. Confirm the username is `ec2-user`.
+6. Click **Connect**.
+
+A browser terminal will open showing the Amazon Linux 2023 welcome banner:
+```
+      ####_
+     _\####\      Amazon Linux 2023
+    ##\#####\
+    ##  \####\    https://aws.amazon.com/linux/amazon-linux-2023
+    ##  /####/
+     ##/###/
+      \###/
+[ec2-user@ip-xxx-xx-x-xx ~]$
 ```
 
-### 2. Install Node.js (v20):
+You are now connected! ✅ All commands below are run inside this browser terminal.
+
+---
+
+## Step 4: Update the System & Install Core Dependencies
+
+> ℹ️ Amazon Linux 2023 uses **`dnf`** as its package manager instead of `apt`.
+
+### 1. Update all system packages:
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
+sudo dnf update -y
+```
+
+### 2. Install Node.js v20 (LTS):
+```bash
+curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+sudo dnf install -y nodejs
+```
+
+Verify installation:
+```bash
+node -v   # Should output v20.x.x
+npm -v    # Should output 10.x.x
 ```
 
 ### 3. Install Git:
 ```bash
-sudo apt-get install -y git
+sudo dnf install -y git
 ```
 
-### 4. Install PM2 (Process Manager for Node.js):
-PM2 will keep your app running online 24/7 even if it crashes or the server restarts.
+### 4. Install PM2 (keeps the app alive 24/7):
 ```bash
 sudo npm install -g pm2
 ```
 
 ---
 
-## Step 3: Clone & Setup Your Application
+## Step 5: Clone & Set Up the DriftMap Repository
 
 ### 1. Clone the repository:
+
+**If your repo is PUBLIC:**
 ```bash
-# Replace this with your actual Git repository URL
-git clone <YOUR_GITHUB_REPO_URL> driftmap
+git clone https://github.com/isha60/DriftMap.git driftmap
 cd driftmap
 ```
 
-### 2. Install Packages:
+**If your repo is PRIVATE (use your Personal Access Token):**
+```bash
+git clone https://YOUR_GITHUB_PAT@github.com/isha60/DriftMap.git driftmap
+cd driftmap
+```
+
+### 2. Install all npm packages:
 ```bash
 npm install
 ```
 
-### 3. Set Up the Environment Variables:
-Create your `.env.local` file to hold your database secret and JWT token securely:
+### 3. Create the environment variables file:
+
+Your app needs a `.env.local` file with your secrets. **Never commit this file to GitHub.**
+
 ```bash
 nano .env.local
 ```
-Paste your precise credentials inside:
+
+Paste the following:
 ```env
-MONGODB_URI=mongodb+srv://isha37623_db_user:Esmyp9mU4Y6zT4cc@driftmap.ceb83gv.mongodb.net/?appName=driftmap
+MONGODB_URI=mongodb+srv://isha37623_db_user:C1xJlFtaq3ZrqgYi@driftmap.ceb83gv.mongodb.net/?appName=driftmap
 JWT_SECRET=4bd50882e3c089f2a6774619d85459313db0f882c49d85459313db0f882c49d8
+NODE_ENV=production
 ```
-*(Press `Ctrl+O` -> `Enter` to save, then `Ctrl+X` to exit).*
+
+Save and exit: Press `Ctrl+O` → `Enter` → `Ctrl+X`.
+
+### 4. Verify the file was saved:
+```bash
+cat .env.local
+```
 
 ---
 
-## Step 4: Build and Start the App (Production Mode)
+## Step 6: Build the Application for Production
 
-Never use `npm run dev` in production, as development mode causes extreme memory usage, WebSocket blocking conflicts, and 500 errors. We will do a full production build instead.
+> ⚠️ **Never use `npm run dev` in production.** Dev mode is memory-intensive and will crash low-tier instances.
 
-### 1. Clean cache & build the app:
+### 1. Clean any old build files:
 ```bash
-# This cleans out any residual dev-server files before making the pure prod build
 rm -rf .next
+```
+
+### 2. Run the production build:
+```bash
 npm run build
 ```
 
-### 2. Start the app dynamically with PM2:
-Because we removed Nginx, Next.js must handle all direct web requests. We will tell PM2 to start Next.js dynamically bound to `0.0.0.0` (all interfaces) on Port `3000`.
+This takes 1–3 minutes. A successful build ends with:
+```
+✓ Compiled successfully
+Route (app)   Size   First Load JS
+...
+```
 
+> 💡 **If the build crashes with an out-of-memory error** (common on `t2.micro`), add swap memory first:
+> ```bash
+> sudo dd if=/dev/zero of=/swapfile bs=128M count=8
+> sudo chmod 600 /swapfile
+> sudo mkswap /swapfile
+> sudo swapon /swapfile
+> echo '/swapfile swap swap defaults 0 0' | sudo tee -a /etc/fstab
+> ```
+> Then re-run `npm run build`.
+
+---
+
+## Step 7: Start the App with PM2
+
+### 1. Start DriftMap on port 3000:
 ```bash
 pm2 start npm --name "driftmap" -- run start -- -H 0.0.0.0 -p 3000
 ```
 
-### 3. Ensure PM2 restarts the app automatically if the server reboots:
+### 2. Check that the app is running:
+```bash
+pm2 status
+```
+You should see `driftmap` with status **`online`**.
+
+### 3. View live logs to confirm no errors:
+```bash
+pm2 logs driftmap --lines 50
+```
+
+Press `Ctrl+C` to exit the log view.
+
+### 4. Save PM2 state and enable auto-start on server reboot:
 ```bash
 pm2 save
 pm2 startup
 ```
 
+> ⚠️ **Important:** `pm2 startup` will output a `sudo env PATH=...` command. **Copy and run that exact command** in your terminal to complete auto-start setup.
+
 ---
 
-## Step 5: Verify and Troubleshoot!
+## Step 8: Verify the Deployment
 
-You are now fully deployed! You can visit your site by taking your **EC2 Public IP address** and adding `:3000` to the end in your browser. 
+Open your browser and visit:
 
-Example: `http://54.123.45.67:3000`
+```
+http://YOUR_EC2_PUBLIC_IP:3000
+```
 
-If something isn't working:
-- **View app crashing errors:** `pm2 logs driftmap`
-- **Is the site taking forever to load?** Double-check your AWS Security Group. If "Custom TCP 3000" isn't explicitly open to `0.0.0.0/0`, the browser will just spin and time out.
-- **Did you pull new code from Github?** Run this to refresh it:
-  ```bash
-  git pull
-  npm install
-  npm run build
-  pm2 restart driftmap
-  ```
+> 💡 Find your **Public IPv4 address** in the EC2 Dashboard under your instance details.
+
+Example: `http://43.204.112.68:3000`
+
+You should see the DriftMap landing page. ✅
+
+---
+
+## Step 9: Redeploy After New Code Changes
+
+Whenever you push new code to GitHub and want to update the server:
+
+```bash
+# Navigate to your app directory
+cd ~/driftmap
+
+# Pull the latest changes
+git pull origin dev   # or main — use whichever branch you pushed to
+
+# Install any new packages
+npm install
+
+# Rebuild for production
+npm run build
+
+# Restart the app
+pm2 restart driftmap
+```
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
+|---|---|
+| **EC2 Instance Connect fails** | Instance is still booting. Wait 2 minutes, then retry. |
+| **Site won't load in browser** | Verify port **3000** is open in your Security Group Inbound Rules. |
+| **App crashes immediately** | Run `pm2 logs driftmap` to see the error message. |
+| **Build fails with memory error** | Add swap memory (see Step 6 note above). |
+| **MongoDB connection error** | Check `.env.local` values. Whitelist your EC2 public IP in **MongoDB Atlas → Network Access**. |
+| **App not restarting after reboot** | Re-run `pm2 startup`, copy-paste the generated command, then run `pm2 save`. |
+| **`Cannot find module` error** | Run `npm install` again inside the `driftmap` directory. |
+
+---
+
+## Quick Reference Commands
+
+```bash
+# Check app status
+pm2 status
+
+# View live logs
+pm2 logs driftmap
+
+# Restart the app
+pm2 restart driftmap
+
+# Stop the app
+pm2 stop driftmap
+
+# Delete the app from PM2
+pm2 delete driftmap
+```
+
+---
+
+*Deployment guide for DriftMap — Next.js + MongoDB Atlas + AWS EC2 (Amazon Linux 2023) + PM2 (No Nginx)*

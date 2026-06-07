@@ -26,6 +26,8 @@ const fetcher = (url: string) => fetch(url, { credentials: "include" }).then((r)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { data, isLoading, mutate } = useSWR("/api/auth/me", fetcher, {
     revalidateOnFocus: false,
+    revalidateOnMount: true,
+    dedupingInterval: 0,
   })
 
   const user = data?.user || null
@@ -59,7 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const logout = useCallback(async () => {
+    // Optimistically clear user from cache BEFORE the fetch completes
+    // This prevents the dashboard guard from seeing a stale user
+    await mutate({ user: null }, false)
     await fetch("/api/auth/logout", { method: "POST" })
+    // Revalidate to confirm the server also cleared the cookie
     await mutate()
   }, [mutate])
 
