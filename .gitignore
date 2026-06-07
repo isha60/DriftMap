@@ -12,3 +12,5 @@ node_modules/
 db_pass.txt
 DEPLOYMENT_GUIDE.md
 walkthrough.md
+
+.env
